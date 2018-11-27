@@ -239,32 +239,11 @@ class SlurmCluster(AbstractCluster):
         os._exit(0)
 
     def __run_experiment(self, train_function):
-
-        try:
-            # Wait (walltime - n mins) to stop the program and prompt checkpointing the model
-            stop_in_n_seconds = self.slurm_time_to_seconds(self.job_time)
-            stop_in_n_seconds -= (self.minutes_to_checkpoint_before_walltime * 60)
-            stop_in_n_seconds = max(stop_in_n_seconds, 10)  # make sure we don't go below the 5 mins
-
-            # schedule timer to interrupt training
-            threading.Timer(stop_in_n_seconds, self.call_save).start()
-
-            # run training
-            train_function(self.hyperparam_optimizer, self, {})
-
-        except Exception as e:
-            print('Caught exception in worker thread', e)
-
-            # This prints the type, value, and stack trace of the
-            # current exception being handled.
-            traceback.print_exc()
-
-            # if exit isn't called on the thread, slurm doesn't have a chance to log the exception
-            thread = threading.Thread(target=exit)
-            thread.start()
-
-            raise SystemExit
-
+        
+        train_function(self.hyperparam_optimizer, self, {})
+        
+        # Delete previous timer.
+        
     def __call_old_slurm_cmd(self, original_slurm_cmd_script_path, exp_i, copy_current=True):
         """
         Copies old slurm script into a new one and adds a load flag in case it wasn't there.
